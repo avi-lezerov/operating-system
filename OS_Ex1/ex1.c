@@ -24,20 +24,26 @@ void exit_with_usage(const char *message) {
 }
 
 void copy_file(const char *source_file, const char *dest_file, int buffer_size, int force_flag) {
-	/*
-	 * Copy source_file content to dest_file, buffer_size bytes at a time.
-	 * If force_flag is true, then also overwrite dest_file. Otherwise print error, and exit.
-	 *
-	 * TODO:
-	 * 	1. Open source_file for reading
-	 * 	2. Open dest_file for writing (Hint: is force_flag true?)
-	 * 	3. Loop reading from source and writing to the destination buffer_size bytes each time
-	 * 	4. Close source_file and dest_file
-	 *
-	 *  ALWAYS check the return values of syscalls for errors!
-	 *  If an error was found, use perror(3) to print it with a message, and then exit(EXIT_FAILURE)
-	 */
+	int source_fd, dest_fd;
+    ssize_t bytes_read, bytes_written;
+    char *buffer = malloc(buffer_size);
+
+	source_fd = open(source_file, O_RDONLY);
+	if (source_fd == -1) {
+		perror("Unable to open source file for reading: No such file or directory");
+		exit(EXIT_FAILURE);
+	}
+
+	
+	
+	
+	
+
+
+
+
 }
+	
 
 void parse_arguments(
 		int argc, char **argv,
