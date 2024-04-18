@@ -30,24 +30,23 @@ void copy_file(const char *source_file, const char *dest_file, int buffer_size, 
 
 	source_fd = open(source_file, O_RDONLY);
 	if (source_fd == -1) {
-		perror("Unable to open source file for reading: No such file or directory");
+		perror("Unable to open source file for reading");
 		exit(EXIT_FAILURE);
 	}
 
-	int flags = O_WRONLY | O_CREAT | O_TRUNC;
-	if (!force_flag) {
+	int flags = O_WRONLY | O_CREAT ;
+	if (force_flag) {
+		flags |= O_TRUNC;
+
+	}else {
 		flags |= O_EXCL;
 	}
 
 	dest_fd = open(dest_file, flags, DESTINATION_FILE_MODE);
-	if (dest_fd == -1 && !force_flag) {
-		perror("Unable to open destination file for writing: File exists");
+	if (dest_fd == -1) {
+		perror("Unable to open destination file for writing");
 		close(source_fd);
 		exit(EXIT_FAILURE);
-	} else if (dest_fd == -1) {
-		perror("Unable to open destination file for writing: Permission denied");
-		close(source_fd);
-		exit(EXIT_FAILURE);	
 	}
 	
 	while((bytes_read = read(source_fd, buffer, buffer_size)) > 0) {
