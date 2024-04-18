@@ -26,7 +26,7 @@ void exit_with_usage(const char *message) {
 void copy_file(const char *source_file, const char *dest_file, int buffer_size, int force_flag) {
 	int source_fd, dest_fd;
     ssize_t bytes_read, bytes_written;
-    char *buffer = malloc(buffer_size);
+	char buffer[buffer_size];
 
 	source_fd = open(source_file, O_RDONLY);
 	if (source_fd == -1) {
@@ -34,17 +34,50 @@ void copy_file(const char *source_file, const char *dest_file, int buffer_size, 
 		exit(EXIT_FAILURE);
 	}
 
-	
-	
-	
-	
+	int flags = O_WRONLY | O_CREAT | O_TRUNC;
+	if (!force_flag) {
+		flags |= O_EXCL;
+	}
 
-
-
-
-}
+	dest_fd = open(dest_file, flags, DESTINATION_FILE_MODE);
+	if (dest_fd == -1 && !force_flag) {
+		perror("Unable to open destination file for writing: File exists");
+		close(source_fd);
+		exit(EXIT_FAILURE);
+	} else if (dest_fd == -1) {
+		perror("Unable to open destination file for writing: Permission denied");
+		close(source_fd);
+		exit(EXIT_FAILURE);	
+	}
 	
+	while((bytes_read = read(source_fd, buffer, buffer_size)) > 0) {
+		bytes_written = write(dest_fd, buffer, bytes_read);
+		if (bytes_written == -1) {
+			perror("Unable to write to destination file");
+			close(source_fd);
+			close(dest_fd);
+			exit(EXIT_FAILURE);
+		}
+		if (bytes_written != bytes_read) {
+            fprintf(stderr, "Unable to write buffer content to destination file\n");
+            close(source_fd);
+            close(dest_fd);
+            exit(EXIT_FAILURE);
+        }
+	}
 
+		if (close(source_fd) == -1) {
+			 perror("Unable to close source file");
+			close(dest_fd);
+			exit(EXIT_FAILURE);
+		}
+		if (close(dest_fd) == -1) {
+			perror("Unable to close destination file");
+			exit(EXIT_FAILURE);
+		}
+		printf("File %s was successfully copied to %s\n",source_file, dest_file);
+	}
+	
 void parse_arguments(
 		int argc, char **argv,
 		char **source_file, char **dest_file, int *buffer_size, int *force_flag) {
