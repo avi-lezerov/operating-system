@@ -15,7 +15,7 @@ def single_run(buffer_size):
         output = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         stderr_lines = output.stderr.strip().split("\n")
         time_line = stderr_lines[0]
-        
+
         user_time = float(time_line.split()[0][:-4])
         sys_time = float(time_line.split()[1][:-6])
         real_time = float(time_line.split()[2][2:-7])
@@ -34,9 +34,9 @@ def single_run(buffer_size):
 
     return [
         buffer_size,
-        f"{avg_real_time:.3f} ± {std_dev_real_time:.3f}",
-        f"{avg_user_time:.3f} ± {std_dev_user_time:.3f}",
-        f"{avg_sys_time:.3f} ± {std_dev_sys_time:.3f}"
+        f"{avg_real_time:.4f} ± {std_dev_real_time:.4f}",
+        f"{avg_user_time:.4f} ± {std_dev_user_time:.4f}",
+        f"{avg_sys_time:.4f} ± {std_dev_sys_time:.4f}"
     ]
 
 def main():
