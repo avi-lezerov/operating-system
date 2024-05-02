@@ -1,7 +1,10 @@
 /*
- * ex2.c
- *
+ ***********************************
+ * Avraham Arie Lezerovich         *
+ * ID: 206436693                   *
+ ***********************************
  */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,17 +135,47 @@ void worker_checker(int worker_id, int num_of_workers, const char *filename, int
 	ssize_t read;
 	int line_number = 0;
 
-	// TODO
+	toplist_file = fopen(filename, "r");
 
-	// go over all the lines
-	while ((read = getline(&line, &len, toplist_file)) != -1) {
-
-		// TODO
-
+	if (toplist_file == NULL) {
+		exit(EXIT_FAILURE);
 	}
 
-	// TODO
+	while ((read = getline(&line, &len, toplist_file)) != -1) {
+		if (read == -1) {
+			perror("unable to read line from file");
+			exit(EXIT_FAILURE);
+		}
+		
+		if(line_number % num_of_workers != worker_id){
+			line_number++;
+			continue;
+		}
+		
+		line[read-1] = '\0'; /* null-terminate the URL */
+		if (URL_UNKNOWN == (res = check_url(line))) {
+			results.unknown++;
+		}
+		else if(res == URL_ERROR){
+			printf("Illegal url detected, exiting now\n");
+			exit(0);
+		}
+		else {
+			results.sum += res;
+			results.amount++;
+		}
+		line_number++;
+	}
 
+	// write the results to the parent
+	if (write(pipe_write_fd, &results, sizeof(ResultStruct)) == -1) {
+		perror("write");
+		exit(EXIT_FAILURE);
+	}
+
+	free(line);
+	fclose(toplist_file);
+	close(pipe_write_fd);
 }
 
 /**
@@ -154,25 +187,47 @@ void parallel_checker(int num_of_processes, const char *filename) {
 
 	ResultStruct results = {0};
 	ResultStruct results_buffer = {0};
+	pid_t pid;
 
 	// initialize  pipe
-	pipe(pipefd);
+	if (pipe(pipefd) == -1) {
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
 
 	// Start num_of_processes new workers
 	for (worker_id = 0; worker_id  < num_of_processes; ++worker_id ) {
-
-		// TODO - fork the children and call worker_checker.
-		// Possible implementation: Let worker_checker on which rows to perform work (from file).
-		
+		pid = fork();
+		if (pid == -1) {
+			perror("fork");
+			exit(EXIT_FAILURE);
+		}
+		if (pid == 0) {
+			close(pipefd[0]);
+			worker_checker(worker_id, num_of_processes, filename, pipefd[1]);
+			exit(EXIT_SUCCESS); // exit child process after finish the work
+		}
 	}
+	
 
-	// TODO
+	
 
+	while (wait(NULL) > 0);
+
+	close(pipefd[1]);
+
+	// read the results from the workers
 	for (worker_id = 0; worker_id  < num_of_processes; ++worker_id ) {
-		
-		// TODO - sum the results
+		if (read(pipefd[0] , &results_buffer, sizeof(ResultStruct)) == -1) {
+			perror("read");
+			exit(EXIT_FAILURE);
+		}
+		results.sum += results_buffer.sum;
+		results.amount += results_buffer.amount;
+		results.unknown += results_buffer.unknown;
 	
 	}
+	close(pipefd[0]);
 
 	// print the total results
 	if(results.amount > 0){
