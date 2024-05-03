@@ -119,13 +119,6 @@ void serial_checker(const char *filename) {
  * @define - handle single worker that run on child process
  */
 void worker_checker(int worker_id, int num_of_workers, const char *filename, int pipe_write_fd) {
-	/*
-	 * TODO: this checker function should operate almost like serial_checker(), except:
-	 * 1. Only processing a distinct subset of the lines (hint: think Modulo)
-	 * 2. Writing the results back to the parent using the pipe_write_fd (i.e. and not to the screen)
-	 * 3. If an URL_ERROR returned, all processes (parent and children) should exit immediatly and an error message should be printed (as in 'serial_checker')
-	 */
-
 	ResultStruct results = {0};
 
 	double res;
@@ -141,32 +134,33 @@ void worker_checker(int worker_id, int num_of_workers, const char *filename, int
 		exit(EXIT_FAILURE);
 	}
 
+	// iterate over the lines in the file to find the line that the worker should handle
 	while ((read = getline(&line, &len, toplist_file)) != -1) {
 		if (read == -1) {
 			perror("unable to read line from file");
 			exit(EXIT_FAILURE);
 		}
-		
+	
 		if(line_number % num_of_workers != worker_id){
 			line_number++;
 			continue;
 		}
-		
-		line[read-1] = '\0'; /* null-terminate the URL */
-		if (URL_UNKNOWN == (res = check_url(line))) {
-			results.unknown++;
-		}
-		else if(res == URL_ERROR){
-			printf("Illegal url detected, exiting now\n");
-			exit(0);
-		}
-		else {
-			results.sum += res;
-			results.amount++;
-		}
-		line_number++;
+		break;
 	}
-
+		
+	line[read-1] = '\0'; /* null-terminate the URL */
+	if (URL_UNKNOWN == (res = check_url(line))) {
+		results.unknown = 1;
+	}
+	else if(res == URL_ERROR){
+		printf("Illegal url detected, exiting now\n");
+		kill(0, SIGKILL); 
+	}
+	else {
+		results.sum = res;
+		results.amount = 1;
+	}
+	
 	// write the results to the parent
 	if (write(pipe_write_fd, &results, sizeof(ResultStruct)) == -1) {
 		perror("write");
@@ -203,19 +197,14 @@ void parallel_checker(int num_of_processes, const char *filename) {
 			exit(EXIT_FAILURE);
 		}
 		if (pid == 0) {
-			close(pipefd[0]);
 			worker_checker(worker_id, num_of_processes, filename, pipefd[1]);
 			exit(EXIT_SUCCESS); // exit child process after finish the work
 		}
 	}
-	
-
-	
 
 	while (wait(NULL) > 0);
 
 	close(pipefd[1]);
-
 	// read the results from the workers
 	for (worker_id = 0; worker_id  < num_of_processes; ++worker_id ) {
 		if (read(pipefd[0] , &results_buffer, sizeof(ResultStruct)) == -1) {
@@ -227,7 +216,6 @@ void parallel_checker(int num_of_processes, const char *filename) {
 		results.unknown += results_buffer.unknown;
 	
 	}
-	close(pipefd[0]);
 
 	// print the total results
 	if(results.amount > 0){
@@ -240,7 +228,7 @@ void parallel_checker(int num_of_processes, const char *filename) {
 		printf("No Average response time from 0 sites, %d Unknown\n", results.unknown);
 	}
 
-
+	close(pipefd[0]);
 }
 
 int main(int argc, char **argv) {
