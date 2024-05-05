@@ -134,32 +134,30 @@ void worker_checker(int worker_id, int num_of_workers, const char *filename, int
 		exit(EXIT_FAILURE);
 	}
 
-	// iterate over the lines in the file to find the line that the worker should handle
-	while ((read = getline(&line, &len, toplist_file)) != -1) {
+	for ( ; (read = getline(&line, &len, toplist_file)) != -1; line_number++) {
 		if (read == -1) {
 			perror("unable to read line from file");
 			exit(EXIT_FAILURE);
-		}
-	
+		}	
+
 		if(line_number % num_of_workers != worker_id){
-			line_number++;
 			continue;
 		}
-		break;
+		line[read-1] = '\0'; /* null-terminate the URL */
+		if (URL_UNKNOWN == (res = check_url(line))) {
+			results.unknown++;
+		}
+		else if(res == URL_ERROR){
+			printf("Illegal url detected, exiting now\n");
+			kill(0, SIGKILL); 
+		}
+		else {
+			results.sum += res;
+			results.amount++;
+		}
 	}
 		
-	line[read-1] = '\0'; /* null-terminate the URL */
-	if (URL_UNKNOWN == (res = check_url(line))) {
-		results.unknown = 1;
-	}
-	else if(res == URL_ERROR){
-		printf("Illegal url detected, exiting now\n");
-		kill(0, SIGKILL); 
-	}
-	else {
-		results.sum = res;
-		results.amount = 1;
-	}
+	
 	
 	// write the results to the parent
 	if (write(pipe_write_fd, &results, sizeof(ResultStruct)) == -1) {
