@@ -37,6 +37,22 @@ void usage() {
 	exit(EXIT_FAILURE);
 }
 
+/**
+ * @define - an helper function to print the results for serial_checker and parallel_checker
+ 
+ */
+void print_results(ResultStruct results){
+	if(results.amount > 0){
+		printf("%.4f Average response time from %d sites, %d Unknown\n",
+						results.sum / results.amount,
+						results.amount,
+						results.unknown);
+	}
+	else{
+		printf("No Average response time from 0 sites, %d Unknown\n", results.unknown);
+	}
+}
+
 double check_url(const char *url) {
 	CURL *curl;
 	CURLcode res;
@@ -93,7 +109,7 @@ void serial_checker(const char *filename) {
 		}
 		else if(res == URL_ERROR){
 			printf("Illegal url detected, exiting now\n");
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 		else {
 			results.sum += res;
@@ -101,19 +117,14 @@ void serial_checker(const char *filename) {
 		}
 	}
 
-	free(line);
-	fclose(toplist_file);
+	print_results(results);
 
-	if(results.amount > 0){
-		printf("%.4f Average response time from %d sites, %d Unknown\n",
-						results.sum / results.amount,
-						results.amount,
-						results.unknown);
-	}
-	else{
-		printf("No Average response time from 0 sites, %d Unknown\n", results.unknown);
-	}
+	free(line);
+	fclose(toplist_file);	
 }
+
+
+
 
 /**
  * @define - handle single worker that run on child process
@@ -215,16 +226,7 @@ void parallel_checker(int num_of_processes, const char *filename) {
 	
 	}
 
-	// print the total results
-	if(results.amount > 0){
-		printf("%.4f Average response time from %d sites, %d Unknown\n",
-						results.sum / results.amount,
-						results.amount,
-						results.unknown);
-	}
-	else{
-		printf("No Average response time from 0 sites, %d Unknown\n", results.unknown);
-	}
+	print_results(results);
 
 	close(pipefd[0]);
 }
