@@ -7,7 +7,7 @@ public class SynchronizedQueue<T> {
 
 	private T[] buffer;
 	private int producers;
-	// TODO: Add more private members here as necessary
+	private ArrayQueue<T> queue;
 	
 	/**
 	 * Constructor. Allocates a buffer (an array) with the given capacity and
@@ -18,7 +18,7 @@ public class SynchronizedQueue<T> {
 	public SynchronizedQueue(int capacity) {
 		this.buffer = (T[])(new Object[capacity]);
 		this.producers = 0;
-		// TODO: Add more logic here as necessary
+		this.queue = new ArrayQueue<>(buffer);
 	}
 	
 	/**
@@ -33,7 +33,18 @@ public class SynchronizedQueue<T> {
 	 * @see #unregisterProducer()
 	 */
 	public T dequeue() {
-
+		if(producers == 0 && queue.isEmpty())
+			return null;
+		while(queue.isEmpty()){
+			try{
+				wait();
+			}catch (InterruptedException e){
+				Thread.currentThread().interrupt();
+			}
+		}
+		T item = queue.dequeue();
+		notifyAll();
+		return item;
 	}
 
 	/**
@@ -43,7 +54,15 @@ public class SynchronizedQueue<T> {
 	 * @param item Item to enqueue
 	 */
 	public void enqueue(T item) {
-
+		while(queue.isFull()){
+			try{
+				wait();
+			}catch(InterruptedException e){
+				Thread.currentThread().interrupt();
+			}
+		}
+		queue.enqueue(item);
+		notifyAll();
 	}
 
 	/**
@@ -51,7 +70,7 @@ public class SynchronizedQueue<T> {
 	 * @return queue capacity
 	 */
 	public int getCapacity() {
-
+		return buffer.length;
 	}
 
 	/**
@@ -59,7 +78,7 @@ public class SynchronizedQueue<T> {
 	 * @return queue size
 	 */
 	public int getSize() {
-
+		return queue.size();
 	}
 	
 	/**
