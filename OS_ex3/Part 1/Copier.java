@@ -1,5 +1,6 @@
 import java.io.File;
-import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 /**
  * A copier thread. Reads files to copy from a queue and copies them to the
@@ -31,16 +32,15 @@ public class Copier implements Runnable {
      */
     @Override
     public void run() {
-        resultsQueue.registerProducer();
         File file;
         while ((file = resultsQueue.dequeue()) != null) {
             try {
-                copyFile(file, destination);
+                copyFile(file);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        resultsQueue.unregisterProducer();
+
     }
 
     /**
@@ -50,24 +50,31 @@ public class Copier implements Runnable {
      * @param destination The destination directory
      * @throws Exception If an error occurs during the copy process
      */
-    public void copyFile(File file, File destination) throws Exception {
-        // Check if the destination directory exists, create it if necessary
-        if (!destination.exists()) {
-            boolean created = destination.mkdirs();
-            if (!created) {
-                throw new IOException("Failed to create destination directory: " + destination);
-            }
-        }
+    private void copyFile(File file) throws Exception {
+        File destFile = fileDestination(file);
+        FileInputStream fis = new FileInputStream(file);
+        FileOutputStream fos = new FileOutputStream(destFile);
 
-        File destFile = new File(destination, file.getName());
-        java.io.FileInputStream fis = new java.io.FileInputStream(file);
-        java.io.FileOutputStream fos = new java.io.FileOutputStream(destFile);
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
         int read;
         while ((read = fis.read(buffer)) != -1) {
             fos.write(buffer, 0, read);
         }
-        fis.close();
         fos.close();
+        fis.close();
     }
+
+    private File fileDestination(File file) throws Exception {
+        String name = file.getName().substring(0, file.getName().lastIndexOf('.')) ;
+        String format = file.getName().substring(file.getName().lastIndexOf('.'));
+        
+        File destFile = new File(destination, name + format);
+        for (int i = 1; i < 10 && !destFile.createNewFile(); i++) {
+            name = name + "(" + i + ")";
+            destFile = new File(destination, name + format);
+
+        }
+        return destFile;
+    }
+
 }

@@ -37,16 +37,15 @@ public class SynchronizedQueue<T> {
 	 */
 	public T dequeue() {
 		synchronized (lock) {
-			while (queue.isEmpty()) {
-				if (producers == 0) {
-					lock.notifyAll(); // Notify all waiting threads before returning null
-					return null;
-				}
+			while (queue.isEmpty() && producers > 0) {
 				try {
 					lock.wait();
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 				}
+			}
+			if (queue.isEmpty() && producers == 0) {
+				return null;
 			}
 			T item = queue.dequeue();
 			lock.notifyAll();
@@ -71,7 +70,9 @@ public class SynchronizedQueue<T> {
 				}
 			}
 			queue.enqueue(item);
-			lock.notifyAll();
+			if (queue.size() == 1) {
+				lock.notifyAll();
+			}
 		}
 	}
 	
@@ -108,7 +109,7 @@ public class SynchronizedQueue<T> {
 	 * when
 	 * finishes to enqueue all items.
 	 * 
-	 * @see #dequeue()
+	 * @see #dequeue().
 	 * @see #unregisterProducer()
 	 */
 	public  void registerProducer() {
@@ -127,9 +128,7 @@ public class SynchronizedQueue<T> {
 	public void unregisterProducer() {
 		synchronized (lock) {
 			this.producers--;
-			if (producers == 0) {
-				lock.notifyAll();
-			}
+			lock.notifyAll();
 		}
 	}
 

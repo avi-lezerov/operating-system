@@ -1,6 +1,9 @@
 import java.io.File;
+import java.io.FilenameFilter;
+
 /**
- * A searcher thread. Searches for files containing a given pattern and that end with a specific extension
+ * A searcher thread. Searches for files containing a given pattern and that end
+ * with a specific extension
  * in all directories listed in a directory queue.
  */
 public class Searcher extends java.lang.Object implements java.lang.Runnable {
@@ -14,10 +17,12 @@ public class Searcher extends java.lang.Object implements java.lang.Runnable {
      * 
      * @param pattern        Pattern to look for
      * @param extension      Wanted extension
-     * @param directoryQueue A queue with directories to search in (as listed by the scouter)
+     * @param directoryQueue A queue with directories to search in (as listed by the
+     *                       scouter)
      * @param resultsQueue   A queue for files found (to be copied by a copier)
      */
-    public Searcher(String pattern, String extension, SynchronizedQueue<File> directoryQueue, SynchronizedQueue<File> resultsQueue) {
+    public Searcher(String pattern, String extension, SynchronizedQueue<File> directoryQueue,
+            SynchronizedQueue<File> resultsQueue) {
         this.pattern = pattern;
         this.extension = extension;
         this.directoryQueue = directoryQueue;
@@ -25,32 +30,42 @@ public class Searcher extends java.lang.Object implements java.lang.Runnable {
     }
 
     /**
-     * Runs the searcher thread. Thread will fetch a directory to search in from the directory queue,
-     * then search all files inside it (but will not recursively search subdirectories!).
-     * Files that contain the pattern and have the wanted extension are enqueued to the results queue.
-     * This method begins by registering to the results queue as a producer and when finishes, it unregisters from it.
+     * Runs the searcher thread. Thread will fetch a directory to search in from the
+     * directory queue,
+     * then search all files inside it (but will not recursively search
+     * subdirectories!).
+     * Files that contain the pattern and have the wanted extension are enqueued to
+     * the results queue.
+     * This method begins by registering to the results queue as a producer and when
+     * finishes, it unregisters from it.
      */
+    @Override
     public void run() {
-       resultsQueue.registerProducer();
-         File directory;
+        try {
+            resultsQueue.registerProducer();
+            File directory;
             while ((directory = directoryQueue.dequeue()) != null) {
                 searchFiles(directory);
             }
-        resultsQueue.unregisterProducer();
+        } finally {
+            resultsQueue.unregisterProducer();
+        }
     }
 
     private void searchFiles(File directory) {
-        File[] files = directory.listFiles();
+        File[] files = directory.listFiles(File::isFile);
+       
         if (files != null) {
             for (File file : files) {
-                if (isFileMatch(file)) {
+                if (isFileMatch(file)) 
                     resultsQueue.enqueue(file);
-                }
             }
         }
     }
 
     private boolean isFileMatch(File file) {
-        return file.isFile() && file.getName().contains(pattern) && file.getName().endsWith(extension);
+        String name = file.getName();
+        String baseName = name.substring(0, name.length() - extension.length());
+        return  baseName.contains(pattern) && name.endsWith(extension);
     }
 }
