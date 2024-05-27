@@ -69,7 +69,7 @@ public class Copier implements Runnable {
         String format = file.getName().substring(file.getName().lastIndexOf('.'));
         
         File destFile = new File(destination, name + format);
-        for (int i = 1; i < 10 && !destFile.createNewFile(); i++) {
+        for (int i = 1; i < 100 && !destFile.createNewFile(); i++) {
             name = name + "(" + i + ")";
             destFile = new File(destination, name + format);
 

@@ -1,4 +1,12 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
 
@@ -22,12 +30,21 @@ public class Main {
     }
 
     private static void workWithThreads(List<String> lines) {
-        //Your code:
-        //Get the number of available cores
-        //Assuming X is the number of cores - Partition the data into x data sets
-        //Create a fixed thread pool of size X
-        //Submit x workers to the thread pool
-		//Wait for termination
+        int x = Runtime.getRuntime().availableProcessors();
+        List<List<String>> partitions = getLinesLiseSpit(x, lines);
+        
+
+        ExecutorService executor = Executors.newFixedThreadPool(x);
+        for (List<String> partition : partitions) {
+            executor.submit(new Worker(partition));
+        }
+
+        executor.shutdown();
+        try {
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void workWithoutThreads(List<String> lines) {
@@ -36,9 +53,22 @@ public class Main {
     }
 
     private static List<String> getLinesFromFile() {
-        //Your code:
-        //Read the shakespeare file provided from C:\Temp\Shakespeare.txt
-        //and return an ArrayList<String> that contains each line read from the file.
-        return null;
+        try {
+            return Files.readAllLines(Paths.get("C:\\Temp\\Shakespeare.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
+    private static List<List<String>> getLinesLiseSpit(int x, List<String> lines){
+        List<List<String>> partitions = new ArrayList<>(x);
+        int partitionSize = lines.size() / x;
+        for (int i = 0; i < x; i++) {
+            int startIndex = i * partitionSize;
+            int endIndex = (i == x - 1) ? lines.size() : (i + 1) * partitionSize;
+            partitions.add(lines.subList(startIndex, endIndex));
+        }
+        return partitions;
     }
 }

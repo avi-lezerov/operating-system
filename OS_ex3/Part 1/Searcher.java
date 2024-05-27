@@ -1,12 +1,11 @@
 import java.io.File;
-import java.io.FilenameFilter;
 
 /**
  * A searcher thread. Searches for files containing a given pattern and that end
  * with a specific extension
  * in all directories listed in a directory queue.
  */
-public class Searcher extends java.lang.Object implements java.lang.Runnable {
+public class Searcher extends Object implements Runnable {
     private final String pattern;
     private final String extension;
     private final SynchronizedQueue<File> directoryQueue;
